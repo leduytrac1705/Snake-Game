@@ -37,7 +37,7 @@ bool ElementInDeque(Vector2 element, deque<Vector2> deque) {
 
 bool WaitForStart() {
     const char *message = "Press SPACE to start";
-    const int fontSize = 40;
+    const int fontSize = 35;
 
     while (WindowShouldClose() == false) {
         if (IsKeyPressed(KEY_SPACE)) {
@@ -126,16 +126,18 @@ class Food {
 
 class Game {
     public:
-    Food food = Food(snake.body);
     Snake snake = Snake();
+    Food food = Food(snake.body);
     bool running = false;
     bool gameOver = false;
     bool quitRequested = false;
     int score = 0;
+    int highestScore = 0;
+    double difficulty = 0.3;
     Sound eatSound;
     Sound wallSound;
 
-    /*Game() {
+    Game() {
         InitAudioDevice();
         eatSound = LoadSound("sound/eat.mp3");
         wallSound = LoadSound("sound/wall.mp3");
@@ -145,7 +147,7 @@ class Game {
         UnloadSound(eatSound);
         UnloadSound(wallSound);
         CloseAudioDevice();
-    }*/
+    }
 
     void Draw() {
         food.Draw();
@@ -166,7 +168,10 @@ class Game {
             food.position = food.GetRandomPosition(snake.body);
             snake.addSegment = true;
             score++;
-            //PlaySound(eatSound);
+            if (score % 5 == 0) {
+                difficulty -= 0.02;
+            }
+            PlaySound(eatSound);
         }
     }
 
@@ -185,10 +190,15 @@ class Game {
     }
 
     void GameOver() {
+        PlaySound(wallSound);
         gameOver = true;
         running = false;
         const char* message = "Game Over! Press SPACE to restart";
-        int fontSize = 40;
+        const char* highScoreText = TextFormat("Highest Score: %i", highestScore);
+        int fontSize = 35;
+        if (score > highestScore) {
+            highestScore = score;
+        }
         while (WindowShouldClose() == false) {
             if (IsKeyPressed(KEY_SPACE)) {
                 gameOver = false;
@@ -198,7 +208,8 @@ class Game {
             ClearBackground(green);
             DrawRectangleLinesEx(Rectangle{offset - 5, offset - 5, cellSize * cellCount + 10, cellSize * cellCount + 10}, 5, darkGreen);
             DrawText("Retro Snake", offset - 5, 20, 40, darkGreen);
-            DrawText(TextFormat("Highest Score: %i", score), offset - 5, offset + cellSize * cellCount + 10, 40, darkGreen);
+            DrawText(TextFormat("Score: %i", score), offset - 5, offset + cellSize * cellCount + 10, fontSize, darkGreen);
+            DrawText(TextFormat("Highest Score: %i", highestScore), (GetScreenWidth() - MeasureText(highScoreText, fontSize)) / 2, (GetScreenHeight() - fontSize) / 2 + fontSize + 15, fontSize, darkGreen);
             DrawText(message, (GetScreenWidth() - MeasureText(message, fontSize)) / 2,
                     (GetScreenHeight() - fontSize) / 2, fontSize, darkGreen);
             EndDrawing();
@@ -232,7 +243,7 @@ int main () {
 
     while (WindowShouldClose() == false && game.quitRequested == false) {
         BeginDrawing();
-        if (EventTriggered(0.2)) {
+        if (EventTriggered(game.difficulty)) {
             game.Update();
         }
 
