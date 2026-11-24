@@ -35,9 +35,30 @@ bool ElementInDeque(Vector2 element, deque<Vector2> deque) {
     return false;
 };
 
+bool WaitForStart() {
+    const char *message = "Press SPACE to start";
+    const int fontSize = 40;
+
+    while (WindowShouldClose() == false) {
+        if (IsKeyPressed(KEY_SPACE)) {
+            return true;
+        }
+
+        BeginDrawing();
+        ClearBackground(green);
+        DrawRectangleLinesEx(Rectangle{offset - 5, offset - 5, cellSize * cellCount + 10, cellSize * cellCount + 10}, 5, darkGreen);
+        DrawText("Retro Snake", offset - 5, 20, 40, darkGreen);
+        DrawText(message, (GetScreenWidth() - MeasureText(message, fontSize)) / 2,
+                 (GetScreenHeight() - fontSize) / 2, fontSize, darkGreen);
+        EndDrawing();
+    }
+
+    return false;
+};
+
 class Snake {
     public:
-    deque<Vector2> body = {Vector2{5, 9}, Vector2{6, 9}, Vector2{7,9}};
+    deque<Vector2> body = {Vector2{7, 9}, Vector2{6, 9}, Vector2{5, 9}};
     Vector2 direction = {1, 0};
     bool addSegment = false;
 
@@ -61,7 +82,7 @@ class Snake {
     }
 
     void Reset() {
-        body = {Vector2{5, 9}, Vector2{6, 9}, Vector2{7,9}};
+        body = {Vector2{7, 9}, Vector2{6, 9}, Vector2{5, 9}};
         direction = {1, 0};
     }
 };
@@ -107,8 +128,9 @@ class Game {
     public:
     Food food = Food(snake.body);
     Snake snake = Snake();
-    bool running = true;
-    bool game_over = false;
+    bool running = false;
+    bool gameOver = false;
+    bool quitRequested = false;
     int score = 0;
     Sound eatSound;
     Sound wallSound;
@@ -163,19 +185,36 @@ class Game {
     }
 
     void GameOver() {
-        /*game_over = true;
-        while (game_over == true) {
-            DrawText("Game Over!", offset - 5, (offset + cellSize * cellCount + 10) / 2, 40, red);
-            if (IsKeyPressed(KEY_SPACE)) {
-                game_over = !game_over;
-            }
-        }*/
-        snake.Reset();
-        food.position = food.GetRandomPosition(snake.body);
+        gameOver = true;
         running = false;
-        score = 0;
+        const char* message = "Game Over! Press SPACE to restart";
+        int fontSize = 40;
+        while (WindowShouldClose() == false) {
+            if (IsKeyPressed(KEY_SPACE)) {
+                gameOver = false;
+                break;
+            }
+            BeginDrawing();
+            ClearBackground(green);
+            DrawRectangleLinesEx(Rectangle{offset - 5, offset - 5, cellSize * cellCount + 10, cellSize * cellCount + 10}, 5, darkGreen);
+            DrawText("Retro Snake", offset - 5, 20, 40, darkGreen);
+            DrawText(TextFormat("Highest Score: %i", score), offset - 5, offset + cellSize * cellCount + 10, 40, darkGreen);
+            DrawText(message, (GetScreenWidth() - MeasureText(message, fontSize)) / 2,
+                    (GetScreenHeight() - fontSize) / 2, fontSize, darkGreen);
+            EndDrawing();
+        }
+        if (gameOver == false) {
+            snake.Reset();
+            food.position = food.GetRandomPosition(snake.body);
+            score = 0;
+        }
+        else {
+            quitRequested = true;
+            return;
+        }
         //PlaySound(wallSound);
     }
+
 };
 
 int main () {
@@ -184,13 +223,21 @@ int main () {
     InitWindow(2*offset + cellSize * cellCount, 2*offset + cellSize * cellCount, "Retro Snake");
     SetTargetFPS(60);
 
+    if (WaitForStart() == false) {
+        CloseWindow();
+        return 0;
+    }
+
     Game game = Game();
 
-    while (WindowShouldClose() == false) {
+    while (WindowShouldClose() == false && game.quitRequested == false) {
         BeginDrawing();
-
         if (EventTriggered(0.2)) {
             game.Update();
+        }
+
+        if (game.quitRequested) {
+            break;
         }
 
         if (IsKeyPressed(KEY_UP) && game.snake.direction.y != 1) {
